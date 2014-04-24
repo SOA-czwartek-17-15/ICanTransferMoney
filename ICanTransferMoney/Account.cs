@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.ServiceModel;
+using System.Runtime.Serialization;
 
 namespace ICanTransferMoney
 {
-    class Account
+    [DataContract(Namespace = "ICanTransferMoney")]
+    public class Account
     {
 
     }

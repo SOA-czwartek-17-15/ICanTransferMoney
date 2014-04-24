@@ -11,13 +11,13 @@ namespace ICanTransferMoney
     public interface ICanTransferMoney
     {
         [OperationContract]
-        bool transferMoney(Account from, Account to);
+        bool TransferMoney(string idFrom, string idTo);
     }
 
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class MoneyTransferer : ICanTransferMoney
     {
-        public bool transferMoney(Account from, Account to)
+        public bool TransferMoney(string idFrom, string idTo)
         {
             Console.Out.WriteLine("Not implemented yet");
             return false;

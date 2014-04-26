@@ -13,14 +13,4 @@ namespace ICanTransferMoney
         [OperationContract]
         bool TransferMoney(string idFrom, string idTo);
     }
-
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
-    public class MoneyTransferer : ICanTransferMoney
-    {
-        public bool TransferMoney(string idFrom, string idTo)
-        {
-            Console.Out.WriteLine("Not implemented yet");
-            return false;
-        }
-    }
 }

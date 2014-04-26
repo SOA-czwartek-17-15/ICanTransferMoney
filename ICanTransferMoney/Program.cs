@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.ServiceModel;
+using Contracts;
 
 namespace ICanTransferMoney
 {
@@ -28,5 +29,7 @@ namespace ICanTransferMoney
 
             Console.ReadLine();
         }
+
+        private static void 
     }
 }

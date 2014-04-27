@@ -14,22 +14,33 @@ namespace ICanTransferMoney
 
         static void Main(string[] args)
         {
-            ICanTransferMoney bank = new MoneyTransferer();
-            var sh = new ServiceHost(bank, new Uri[] { new Uri(SERVICE_ADDRESS) });
-            NetTcpBinding serverBinding = new NetTcpBinding();
-            sh.AddServiceEndpoint(typeof(ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
-
-            sh.Open();
-
-            // Łączymy się na ServiceRepository
-            NetTcpBinding srBinding = new NetTcpBinding();
-            ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(srBinding, new EndpointAddress("net.tcp://localhost:41234/IServiceRepository"));
-            IServiceRepository isr = cf.CreateChannel();
-            isr.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
+            IServiceRepository serviceRepo = ConnectServiceRepository();
+            MoneyTransferer transferer = new MoneyTransferer(serviceRepo);
+            OpenService(transferer);
+            RegisterService(serviceRepo);
 
             Console.ReadLine();
         }
 
-        private static void 
+        private static IServiceRepository ConnectServiceRepository()
+        {
+            NetTcpBinding srBinding = new NetTcpBinding();
+            ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(srBinding, new EndpointAddress("net.tcp://localhost:41234/IServiceRepository"));
+            return cf.CreateChannel();
+        }
+
+        private static void OpenService(Contracts.ICanTransferMoney transferer)
+        {
+            var sh = new ServiceHost(transferer, new Uri[] { new Uri(SERVICE_ADDRESS) });
+            NetTcpBinding serverBinding = new NetTcpBinding();
+            sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
+
+            sh.Open();
+        }
+
+        private static void RegisterService(IServiceRepository isr)
+        {
+            isr.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
+        }
     }
 }

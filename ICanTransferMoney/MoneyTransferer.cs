@@ -8,23 +8,21 @@ using Contracts;
 
 namespace ICanTransferMoney
 {
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerCall)]
+    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class MoneyTransferer : Contracts.ICanTransferMoney
     {
-        
-        private IAccountRepository accountRepository;
-        private IAuditorService auditorService;
+        private IServiceFactory serviceFactory;
 
         public MoneyTransferer(IServiceFactory serviceFactory)
         {
-            accountRepository = serviceFactory.GetAccountRepository();
-            auditorService = serviceFactory.GetAuditorService();
+            this.serviceFactory = serviceFactory;
         }
-
 
         public bool TransferMoney(Guid accIdFrom, Guid accIdTo, long amount)
         {
-            
+            IAccountRepository accountRepository = serviceFactory.GetAccountRepository();
+            IAuditorService auditorService = serviceFactory.GetAuditorService();
+
             bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);
             
             if(withdrawn)

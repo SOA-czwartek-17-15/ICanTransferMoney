@@ -7,10 +7,10 @@ using Contracts;
 
 namespace ICanTransferMoney
 {
-    interface IServiceFactory
+    public interface IServiceFactory
     {
-        public IServiceRepository GetServiceRepository();
-        public IAccountRepository GetAccountRepository();
-        public IAuditorService GetAuditorService();
+        IServiceRepository GetServiceRepository();
+        IAccountRepository GetAccountRepository();
+        IAuditorService GetAuditorService();
     }
 }

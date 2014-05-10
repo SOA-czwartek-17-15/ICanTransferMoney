@@ -14,33 +14,32 @@ namespace ICanTransferMoney
 
         static void Main(string[] args)
         {
-            IServiceRepository serviceRepo = ConnectServiceRepository();
-            MoneyTransferer transferer = new MoneyTransferer(serviceRepo);
+            // set up data sources
+            ServiceConnector serviceConnector = ServiceConnector.Instance;
+
+            // set up service
+            MoneyTransferer transferer = new MoneyTransferer(serviceConnector);
             OpenService(transferer);
+            
+            // register service
+            IServiceRepository serviceRepo = serviceConnector.GetServiceRepository();
             RegisterService(serviceRepo);
 
             Console.ReadLine();
         }
 
-        private static IServiceRepository ConnectServiceRepository()
-        {
-            NetTcpBinding srBinding = new NetTcpBinding();
-            ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(srBinding, new EndpointAddress("net.tcp://localhost:41234/IServiceRepository"));
-            return cf.CreateChannel();
-        }
 
-        private static void OpenService(Contracts.ICanTransferMoney transferer)
+        private static void OpenService(Contracts.ICanTransferMoney service)
         {
-            var sh = new ServiceHost(transferer, new Uri[] { new Uri(SERVICE_ADDRESS) });
+            var sh = new ServiceHost(service, new Uri[] { new Uri(SERVICE_ADDRESS) });
             NetTcpBinding serverBinding = new NetTcpBinding();
             sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
-
             sh.Open();
         }
 
-        private static void RegisterService(IServiceRepository isr)
+        private static void RegisterService(IServiceRepository serviceRepo)
         {
-            isr.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
+            serviceRepo.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
         }
     }
 }

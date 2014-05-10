@@ -11,39 +11,51 @@ namespace ICanTransferMoney
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerCall)]
     public class MoneyTransferer : Contracts.ICanTransferMoney
     {
+        
         private IAccountRepository accountRepository;
+        private IAuditorService auditorService;
 
-        public MoneyTransferer(IServiceRepository serviceRepo)
+        public MoneyTransferer(IServiceFactory serviceFactory)
         {
-            string address = serviceRepo.GetServiceAddress("IAccountRepository");
-            NetTcpBinding srBinding = new NetTcpBinding();
-            ChannelFactory<IAccountRepository> cf = new ChannelFactory<IAccountRepository>(srBinding, new EndpointAddress(address));
-            accountRepository = cf.CreateChannel();
+            accountRepository = serviceFactory.GetAccountRepository();
+            auditorService = serviceFactory.GetAuditorService();
         }
 
 
-        public bool TransferMoney(string accNrFrom, string accNrTo, long amount)
+        public bool TransferMoney(Guid accIdFrom, Guid accIdTo, long amount)
         {
-            // ZARYS
-            // - Pobierz konta
-            // - Przelej pieniądze
-            // - Zapisz przelew do BD
-            // - Zamknij połączenie
-
-            Account accFrom = accountRepository.GetAccountInformation(accNrFrom);
-            Account accTo = accountRepository.GetAccountInformation(accNrTo);
-
-            if (accFrom.Money < amount)
-                return false;
-
-            //TODO
-
-            Console.Out.WriteLine("Not implemented yet");
+            
+            bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);
+            
+            if(withdrawn)
+            {
+                bool transferred = accountRepository.ChangeAccountBalance(accIdTo, amount);
+                if(!transferred)
+                {
+                    // assert IAccountRepository is FUCKED UP
+                    // try to recover
+                    accountRepository.ChangeAccountBalance(accIdFrom, amount);
+                    return false;
+                }
+                // make audits
+                bool auditFromDone = auditorService.AddAudit(accIdFrom, -amount);
+                if (!auditFromDone)
+                    scheduleAuditRetry(accIdFrom, -amount);
+                bool auditToDone = auditorService.AddAudit(accIdTo, amount);
+                if (!auditToDone)
+                    scheduleAuditRetry(accIdTo, amount);
+                return true;
+            }
+            
+            // probably not enough money
             return false;
         }
 
 
 
-
+        public void scheduleAuditRetry(Guid accountId, long amount)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.ServiceModel;
+using Contracts;
 
 namespace ICanTransferMoney
 {
@@ -13,20 +14,32 @@ namespace ICanTransferMoney
 
         static void Main(string[] args)
         {
-            ICanTransferMoney bank = new MoneyTransferer();
-            var sh = new ServiceHost(bank, new Uri[] { new Uri(SERVICE_ADDRESS) });
-            NetTcpBinding serverBinding = new NetTcpBinding();
-            sh.AddServiceEndpoint(typeof(ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
+            // set up data sources
+            ServiceConnector serviceConnector = ServiceConnector.Instance;
 
-            sh.Open();
-
-            // Łączymy się na ServiceRepository
-            NetTcpBinding srBinding = new NetTcpBinding();
-            ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(srBinding, new EndpointAddress("net.tcp://localhost:41234/IServiceRepository"));
-            IServiceRepository isr = cf.CreateChannel();
-            isr.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
+            // set up service
+            MoneyTransferer transferer = new MoneyTransferer(serviceConnector);
+            OpenService(transferer);
+            
+            // register service
+            IServiceRepository serviceRepo = serviceConnector.GetServiceRepository();
+            RegisterService(serviceRepo);
 
             Console.ReadLine();
+        }
+
+
+        private static void OpenService(Contracts.ICanTransferMoney service)
+        {
+            var sh = new ServiceHost(service, new Uri[] { new Uri(SERVICE_ADDRESS) });
+            NetTcpBinding serverBinding = new NetTcpBinding();
+            sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
+            sh.Open();
+        }
+
+        private static void RegisterService(IServiceRepository serviceRepo)
+        {
+            serviceRepo.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
         }
     }
 }

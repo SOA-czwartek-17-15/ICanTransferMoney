@@ -13,6 +13,13 @@ namespace ICanTransferMoney
         private IAccountRepository accountRepoMock;
         private IAuditorService auditorServMock;
 
+        public ServiceFactoryMock()
+        {
+            serviceRepoMock = new Mock.ServiceRepoMock();
+            accountRepoMock = new Mock.AccountRepoMock();
+            auditorServMock = new Mock.AuditorServMock();
+        }
+
         public Contracts.IServiceRepository GetServiceRepository()
         {
             return serviceRepoMock;

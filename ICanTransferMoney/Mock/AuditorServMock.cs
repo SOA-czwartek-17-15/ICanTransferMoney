@@ -8,47 +8,49 @@ namespace ICanTransferMoney.Mock
 {
     class AuditorServMock : IAuditorService
     {
-        public bool AddAudit(Guid accountId, long Money)
+
+        bool IAuditorService.AddAudit(string accountNumber, long Money)
+        {
+            Console.WriteLine("Audit done for accountNr " + accountNumber + " with change of balance " + Money);
+            return true;
+        }
+
+        IEnumerable<Audit> IAuditorService.AuditAll()
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Audit> AuditAll()
+        IEnumerable<Audit> IAuditorService.GetAuditsByAccount(string accountNumber)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Audit> GetAuditsByAccount(Guid accountId)
+        IEnumerable<Audit> IAuditorService.GetAuditsByDate(DateTime date)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Audit> GetAuditsByDate(DateTime date)
+        int IAuditorService.GetNumberOfCredits()
         {
             throw new NotImplementedException();
         }
 
-        public int GetNumberOfCredits()
+        int IAuditorService.GetNumberOfTransfersByAccount(string accountNumber)
         {
             throw new NotImplementedException();
         }
 
-        public int GetNumberOfTransfersByAccount(Guid accountId)
+        int IAuditorService.GetNumberOfTransfersByDate(DateTime date)
         {
             throw new NotImplementedException();
         }
 
-        public int GetNumberOfTransfersByDate(DateTime date)
+        int IAuditorService.GetTransferedMoneyByAccount(string accountNumber)
         {
             throw new NotImplementedException();
         }
 
-        public int GetTransferedMoneyByAccount(Guid accountId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int GetTransferedMoneyByDate(DateTime date)
+        int IAuditorService.GetTransferedMoneyByDate(DateTime date)
         {
             throw new NotImplementedException();
         }

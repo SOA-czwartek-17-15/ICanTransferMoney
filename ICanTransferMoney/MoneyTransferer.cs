@@ -23,6 +23,12 @@ namespace ICanTransferMoney
             IAccountRepository accountRepository = serviceFactory.GetAccountRepository();
             IAuditorService auditorService = serviceFactory.GetAuditorService();
 
+            
+            string accNrFrom = accountRepository.GetAccountById(accIdFrom).AccountNumber;
+            string accNrTo = accountRepository.GetAccountById(accIdTo).AccountNumber;
+
+
+            // OPERATIONS:
             bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);
             
             if(withdrawn)
@@ -30,16 +36,16 @@ namespace ICanTransferMoney
                 bool transferred = accountRepository.ChangeAccountBalance(accIdTo, amount);
                 if(!transferred)
                 {
-                    // assert IAccountRepository is FUCKED UP
+                    // assert IAccountRepository is BROKEN
                     // try to recover
                     accountRepository.ChangeAccountBalance(accIdFrom, amount);
                     return false;
                 }
                 // make audits
-                bool auditFromDone = auditorService.AddAudit(accIdFrom, -amount);
+                bool auditFromDone = auditorService.AddAudit(accNrFrom,-amount);
                 if (!auditFromDone)
                     scheduleAuditRetry(accIdFrom, -amount);
-                bool auditToDone = auditorService.AddAudit(accIdTo, amount);
+                bool auditToDone = auditorService.AddAudit(accNrTo,amount);
                 if (!auditToDone)
                     scheduleAuditRetry(accIdTo, amount);
                 return true;

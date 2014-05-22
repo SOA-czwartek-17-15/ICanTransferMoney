@@ -8,24 +8,26 @@ namespace ICanTransferMoney.Mock
 {
     class ServiceRepoMock : IServiceRepository
     {
-        public string GetServiceAddress(string serviceName)
+
+
+        public void Alive(string Name)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Alive sent to service repository");
         }
 
-        public void IsAlive(string serviceName)
+        public string GetServiceLocation(string Name)
         {
-            throw new NotImplementedException();
+            return Name;
         }
 
-        public void RegisterService(string serviceName, string serviceAddress)
+        public void RegisterService(string Name, string Address)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Service " + Name + " registered on address "+Address);
         }
 
-        public void UnregisterService(string serviceName)
+        public void Unregister(string Name)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Service " + Name + " unregistered from service repo");
         }
     }
 }

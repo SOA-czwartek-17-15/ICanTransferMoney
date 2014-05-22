@@ -8,22 +8,53 @@ namespace ICanTransferMoney.Mock
 {
     class AccountRepoMock : IAccountRepository
     {
-        public bool ChangeAccountBalance(Guid accountId, long amount)
+        List<Account> accounts;
+
+        public AccountRepoMock()
         {
-            throw new NotImplementedException();
+            accounts = new List<Account>();
         }
 
-        public long CreateAccount(int clientId, Account details)
+        public bool ChangeAccountBalance(Guid accountId, long amount)
         {
-            throw new NotImplementedException();
+            foreach(var acc in accounts){
+                if(acc.Id.Equals(accountId))
+                {
+                    if (acc.Money + amount < 0)
+                        return false;
+                    Console.WriteLine("Changing balance of accId=" + acc.Id + " by "+amount);
+                    acc.Money += amount;
+                    return true;
+                }
+            }
+            return false;
         }
+
 
         public Account GetAccountById(Guid accountId)
         {
-            throw new NotImplementedException();
+            foreach (var acc in accounts)
+            {
+                if (acc.ClientId.Equals(accountId))
+                {
+                    return acc;
+                }
+            }
+            return null;
         }
 
         public Account GetAccountInformation(string accountNumber)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddAccount(Account acc)
+        {
+            accounts.Add(acc);
+        }
+
+
+        bool IAccountRepository.CreateAccount(Account details)
         {
             throw new NotImplementedException();
         }

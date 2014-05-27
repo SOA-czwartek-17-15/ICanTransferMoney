@@ -6,16 +6,48 @@ using System.Threading.Tasks;
 using System.ServiceModel;
 using Contracts;
 using System.Timers;
+using System.Xml;
 namespace ICanTransferMoney
 {
     class Program
     {
-        const string SERVICE_ADDRESS = "net.tcp://0.0.0.0:41234/ICanTransferMoney";
+        static string address = "";
+
         static Timer keepAliveTimer;
+        static Timer connectTimer;
+
         static void Main(string[] args)
         {
+            // Wczytanie konfiguracji
+            XmlDocument doc = new XmlDocument();
+            doc.Load("../../config.xml");
+            address = doc.GetElementsByTagName("address")[0].InnerText;
+
+            // Próba połączenia
+            connectTimer = new Timer(5000);  // Próbuj łączyć się co 5s
+            connectTimer.Elapsed += new ElapsedEventHandler(TryToConnect);
+            connectTimer.Start();
+            TryToConnect();  // Nie czekaj 5s, tylko próbuj pierwszy raz od razu
+        }
+
+        private static void TryToConnect(object sender = null, ElapsedEventArgs e = null)
+        {
             // set up data sources
-            IServiceFactory serviceFactory = new ServiceFactoryMock(); // new ServiceConnector();
+            try
+            {
+                IServiceFactory serviceFactory = new ServiceFactoryMock(); // new ServiceConnector();
+                connectTimer.Stop();
+                Initialize(serviceFactory);
+            }
+            catch(EndpointNotFoundException)
+            {
+                Console.WriteLine("ServiceConnector not found. Will try again every 5s.");
+            }
+        }
+
+        static void Initialize(IServiceFactory serviceFactory)
+        {
+            Console.WriteLine("Successfully connected to ServiceConnector.");
 
             // set up service
             MoneyTransferer transferer = new MoneyTransferer(serviceFactory);
@@ -55,15 +87,15 @@ namespace ICanTransferMoney
 
         private static void OpenService(Contracts.ICanTransferMoney service)
         {
-            var sh = new ServiceHost(service, new Uri[] { new Uri(SERVICE_ADDRESS) });
+            var sh = new ServiceHost(service, new Uri[] { new Uri(address + "/ICanTransferMoney") });
             NetTcpBinding serverBinding = new NetTcpBinding();
-            sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
+            sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, address + "/ICanTransferMoney");
             sh.Open();
         }
 
         private static void RegisterService(IServiceRepository serviceRepo)
         {
-            serviceRepo.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
+            serviceRepo.RegisterService("ICanTransferMoney", address + "/ICanTransferMoney");
             AliveKeeper keeper = new AliveKeeper(serviceRepo);
             keepAliveTimer = new Timer(1000);
             keepAliveTimer.Elapsed += new ElapsedEventHandler(keeper.KeepAlive);

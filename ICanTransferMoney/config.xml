@@ -1,0 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TransferMoneyConfig>
+  <address>net.tcp://0.0.0.0:41234</address>
+</TransferMoneyConfig>

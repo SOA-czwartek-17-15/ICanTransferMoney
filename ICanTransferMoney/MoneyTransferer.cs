@@ -20,13 +20,33 @@ namespace ICanTransferMoney
 
         public bool TransferMoney(Guid accIdFrom, Guid accIdTo, long amount)
         {
-            IAccountRepository accountRepository = serviceFactory.GetAccountRepository();
-            IAuditorService auditorService = serviceFactory.GetAuditorService();
+            IAccountRepository accountRepository;
+            IAuditorService auditorService;
 
-            
-            string accNrFrom = accountRepository.GetAccountById(accIdFrom).AccountNumber;
-            string accNrTo = accountRepository.GetAccountById(accIdTo).AccountNumber;
+            try
+            {
+                accountRepository = serviceFactory.GetAccountRepository();
+                auditorService = serviceFactory.GetAuditorService();
+            }
+            catch(EndpointNotFoundException)
+            {
+                Console.WriteLine("Cannot connect to required services.");
+                return false;
+            }
 
+            string accNrFrom;
+            string accNrTo;
+
+            try
+            {
+                accNrFrom = accountRepository.GetAccountById(accIdFrom).AccountNumber;
+                accNrTo = accountRepository.GetAccountById(accIdTo).AccountNumber;
+            }
+            catch(NullReferenceException)
+            {
+                Console.WriteLine("Invalid account ID given.");
+                return false;
+            }
 
             // OPERATIONS:
             bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);

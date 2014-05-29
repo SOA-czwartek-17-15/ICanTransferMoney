@@ -14,7 +14,6 @@ namespace ICanTransferMoney
 
         // should be injected
         private string serviceRepositoryAddress { get; set; }
-        
 
         private IServiceRepository serviceRepository;
         private IAccountRepository accountRepository;
@@ -24,7 +23,7 @@ namespace ICanTransferMoney
         private ServiceConnector() 
         {
             // only for debug
-            serviceRepositoryAddress = "net.tcp://localhost:41234/IServiceRepository";
+            serviceRepositoryAddress = "net.tcp://192.168.0.90:50000/IServiceRepository";
         }
 
         public static ServiceConnector Instance
@@ -43,9 +42,10 @@ namespace ICanTransferMoney
         {
             if (serviceRepository != null)
                 return serviceRepository;
-            NetTcpBinding binding = new NetTcpBinding();
+            NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(binding, new EndpointAddress(serviceRepositoryAddress));
-            return cf.CreateChannel();
+            serviceRepository = cf.CreateChannel();
+            return serviceRepository;
         }
 
         public IAccountRepository GetAccountRepository()
@@ -53,9 +53,10 @@ namespace ICanTransferMoney
             if (accountRepository != null)
                 return accountRepository;
             string address = GetServiceRepository().GetServiceLocation("IAccountRepository");
-            NetTcpBinding binding = new NetTcpBinding();
+            NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IAccountRepository> cf = new ChannelFactory<IAccountRepository>(binding, new EndpointAddress(address));
-            return cf.CreateChannel();
+            accountRepository = cf.CreateChannel();
+            return accountRepository;
         }
 
         public IAuditorService GetAuditorService()
@@ -63,9 +64,10 @@ namespace ICanTransferMoney
             if (auditorService != null)
                 return auditorService;
             string address = GetServiceRepository().GetServiceLocation("IAuditorService");
-            NetTcpBinding binding = new NetTcpBinding();
+            NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IAuditorService> cf = new ChannelFactory<IAuditorService>(binding, new EndpointAddress(address));
-            return cf.CreateChannel();
+            auditorService = cf.CreateChannel();
+            return auditorService;
         }
     }
 }

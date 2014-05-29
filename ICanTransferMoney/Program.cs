@@ -8,77 +8,103 @@ using Contracts;
 using System.Timers;
 using log4net;
 using log4net.Config;
+using System.Xml;
 namespace ICanTransferMoney
 {
     class Program
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+        static string serviceRepoAddress = "";
+        static string localAddress = "";
+        static Timer keepAliveTimer;
+        static Timer connectTimer;
+        static ILog log = LogManager.GetLogger("Program");
+        static ServiceHost serviceHost;
+        static IServiceRepository serviceRepo;
 
-        const string SERVICE_ADDRESS = "net.tcp://192.168.0.98:50000/ICanTransferMoney";
-        static Timer keepAliveTimer; 
         static void Main(string[] args)
         {
             BasicConfigurator.Configure();
+            // Wczytanie konfiguracji
+            XmlDocument doc = new XmlDocument();
+            try
+            {
+                doc.Load("../../config.xml");
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                Console.WriteLine("Configuration file not found!");
+                return;
+            }
+            
+            serviceRepoAddress = doc.GetElementsByTagName("serviceRepoAddress")[0].InnerText;
+            localAddress = doc.GetElementsByTagName("localAddress")[0].InnerText;
 
+            if (serviceRepoAddress == null || localAddress == null)
+            {
+                Console.WriteLine("Service Repository address or local address not found in config file");
+                return;
+            }
+
+            // Próba połączenia
+            connectTimer = new Timer(5000);  // Próbuj łączyć się co 5s
+            connectTimer.Elapsed += new ElapsedEventHandler(BuildConnectionsFramework);
+
+            BuildConnectionsFramework();
+
+            Console.WriteLine("ICanTransferMoney is running.");
+            Console.WriteLine("Hit any key to prepare shutdown.");
+            Console.ReadLine();
+            Console.WriteLine("Click once again to shutdown service.");
+            Console.ReadLine();
+            UnregisterService();
+            Console.WriteLine("Service closed. Press any key to continue.");
+            Console.ReadLine();
+        }
+
+        private static void BuildConnectionsFramework(object sender = null, ElapsedEventArgs e = null)
+        {
             // set up data sources
-            IServiceFactory serviceFactory = ServiceConnector.Instance;
+            try
+            {
+                Initialize();
+                connectTimer.Stop();
+            }
+            catch(EndpointNotFoundException)
+            {
+                Console.WriteLine("One of services not found. Will try again every 5s.");
+                if(!connectTimer.Enabled)
+                    connectTimer.Start();
+            }
+        }
 
+        static void Initialize()
+        {
             // set up service
+            Console.WriteLine("Initializing services...");
+            IServiceFactory serviceFactory = new ServiceConnector(serviceRepoAddress);
+
+            serviceRepo = serviceFactory.GetServiceRepository();
             MoneyTransferer transferer = new MoneyTransferer(serviceFactory);
+
             OpenService(transferer);
-            
-            // register service
-            IServiceRepository serviceRepo = serviceFactory.GetServiceRepository();
             RegisterService(serviceRepo);
-
-            var accountRepo = serviceFactory.GetAccountRepository();
-            var auditServ = serviceFactory.GetAuditorService();
-            
-            // mocking accounts
-            /*Console.ReadLine();
-            Console.WriteLine("Mocking accounts");
-            var accRepo = (Mock.AccountRepoMock)serviceFactory.GetAccountRepository();
-            Account someAccount1 = new Account();
-            Guid acc1guid = new Guid();
-            someAccount1.Id = acc1guid;
-            someAccount1.Money = 2000;
-            accRepo.AddAccount(someAccount1);
-
-            Account someAccount2 = new Account();
-            Guid acc2guid = new Guid();
-            someAccount2.Id = acc2guid;
-            someAccount2.Money = 4000;
-            accRepo.AddAccount(someAccount2);*/
-            /////////////
-
-            /*Console.ReadLine();
-            Console.WriteLine("Transfering money");
-            // transfering money
-            transferer.TransferMoney(acc1guid, acc2guid, 1000);*/
-            
-
-            Console.ReadLine();
-            UnregisterService(serviceRepo);
-            Console.ReadLine();
         }
 
 
         private static void OpenService(Contracts.ICanTransferMoney service)
         {
             log.Info("Opening service endpoint");
-            var sh = new ServiceHost(service, new Uri[] { new Uri(SERVICE_ADDRESS) });
+            serviceHost = new ServiceHost(service, new Uri[] { new Uri(localAddress) });
             NetTcpBinding serverBinding = new NetTcpBinding(SecurityMode.None);
-            sh.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, SERVICE_ADDRESS);
-            sh.Open();
+            serviceHost.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, localAddress);
+            serviceHost.Open();
             log.Info("Service endpoint opened");
         }
 
         private static void RegisterService(IServiceRepository serviceRepo)
         {
             log.Info("Registering service in ServiceRepository");
-            
-            serviceRepo.RegisterService("ICanTransferMoney", SERVICE_ADDRESS);
-
+            serviceRepo.RegisterService("ICanTransferMoney", localAddress);
             log.Info("Service registered");
             
             AliveKeeper keeper = new AliveKeeper(serviceRepo);
@@ -87,10 +113,18 @@ namespace ICanTransferMoney
             keepAliveTimer.Enabled = true;
         }
 
-        private static void UnregisterService(IServiceRepository serviceRepo)
+        private static void UnregisterService()
         {
             log.Info("Unregistering service");
-            serviceRepo.Unregister("ICanTransferMoney");
+            try
+            {
+                serviceRepo.Unregister("ICanTransferMoney");
+                serviceHost.Close();
+            }
+            catch (TimeoutException)
+            {
+
+            }
             keepAliveTimer.Enabled = false;
             log.Info("Service unregistered");
         }

@@ -10,7 +10,6 @@ namespace ICanTransferMoney
 {
     class ServiceConnector : IServiceFactory
     {
-        private static ServiceConnector instance;
 
         // should be injected
         private string serviceRepositoryAddress { get; set; }
@@ -19,24 +18,24 @@ namespace ICanTransferMoney
         private IAccountRepository accountRepository;
         private IAuditorService auditorService;
 
-        // singleton class
-        private ServiceConnector() 
+        public  ServiceConnector(string serviceRepoAddress) 
         {
-            // only for debug
-            serviceRepositoryAddress = "net.tcp://192.168.0.90:50000/IServiceRepository";
-        }
-
-        public static ServiceConnector Instance
-        {
-            get
+            this.serviceRepositoryAddress = serviceRepoAddress;
+            try
             {
-                if (instance == null)
-                {
-                    instance = new ServiceConnector();
-                }
-                return instance;
+                serviceRepository = GetServiceRepository();
+                accountRepository = GetAccountRepository();
+                auditorService = GetAuditorService();
+            }
+            catch (EndpointNotFoundException ex)
+            {
+                serviceRepository = null;
+                accountRepository = null;
+                auditorService = null;
+                throw ex;
             }
         }
+
 
         public IServiceRepository GetServiceRepository()
         {

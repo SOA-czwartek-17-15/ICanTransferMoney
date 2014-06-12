@@ -41,6 +41,7 @@ namespace ICanTransferMoney
         {
             if (serviceRepository != null)
                 return serviceRepository;
+
             NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IServiceRepository> cf = new ChannelFactory<IServiceRepository>(binding, new EndpointAddress(serviceRepositoryAddress));
             serviceRepository = cf.CreateChannel();
@@ -52,6 +53,8 @@ namespace ICanTransferMoney
             if (accountRepository != null)
                 return accountRepository;
             string address = GetServiceRepository().GetServiceLocation("IAccountRepository");
+            if (address == null)
+                return null;
             NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IAccountRepository> cf = new ChannelFactory<IAccountRepository>(binding, new EndpointAddress(address));
             accountRepository = cf.CreateChannel();
@@ -63,6 +66,8 @@ namespace ICanTransferMoney
             if (auditorService != null)
                 return auditorService;
             string address = GetServiceRepository().GetServiceLocation("IAuditorService");
+            if (address == null)
+                return null;
             NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
             ChannelFactory<IAuditorService> cf = new ChannelFactory<IAuditorService>(binding, new EndpointAddress(address));
             auditorService = cf.CreateChannel();

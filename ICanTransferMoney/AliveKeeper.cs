@@ -20,8 +20,16 @@ namespace ICanTransferMoney
 
         public void KeepAlive(object source, ElapsedEventArgs args)
         {
-            log.Info("Sending alive");
-            servRepo.Alive("ICanTransferMoney");
+            try
+            {
+                servRepo.Alive("ICanTransferMoney");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Connection to IServiceRepository lost.");
+                log.Error(ex.Message);
+                return;
+            }
             log.Info("Alive sent");
         }
     }

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" ?> 
+<hibernate-mapping xmlns="urn:nhibernate-mapping-2.2" 
+                   assembly="ICanTransferMoney" 
+                   namespace="ICanTransferMoney">
+
+  <class name="TransferAudit">
+    <id name="Id">
+      <generator class="guid" />
+    </id>
+    <property name="AccountNrFrom" />
+    <property name="AccountNrTo" />
+    <property name="Amount" />
+  </class>
+  
+</hibernate-mapping>

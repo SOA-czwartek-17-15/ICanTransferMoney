@@ -9,6 +9,10 @@ using System.Timers;
 using log4net;
 using log4net.Config;
 using System.Xml;
+using NHibernate.Cfg;
+using NHibernate;
+using NHibernate.Tool.hbm2ddl;
+using System.Data.SQLite;
 namespace ICanTransferMoney
 {
     class Program
@@ -16,13 +20,15 @@ namespace ICanTransferMoney
         static string serviceRepoAddress = "";
         static string localAddress = "";
         static Timer keepAliveTimer;
-        static Timer connectTimer;
         static ILog log = LogManager.GetLogger("Program");
         static ServiceHost serviceHost;
         static IServiceRepository serviceRepo;
+        static ISessionFactory sessionFactory;
+
 
         static void Main(string[] args)
         {
+
             BasicConfigurator.Configure();
             // Wczytanie konfiguracji
             XmlDocument doc = new XmlDocument();
@@ -30,9 +36,11 @@ namespace ICanTransferMoney
             {
                 doc.Load("../../config.xml");
             }
-            catch (System.IO.FileNotFoundException)
+            catch (Exception ex)
             {
-                Console.WriteLine("Configuration file not found!");
+                Console.WriteLine("Error while opening XML file!");
+                log.Error(ex.ToString());
+                Console.ReadLine();
                 return;
             }
             
@@ -46,10 +54,8 @@ namespace ICanTransferMoney
             }
 
             // Próba połączenia
-            connectTimer = new Timer(5000);  // Próbuj łączyć się co 5s
-            connectTimer.Elapsed += new ElapsedEventHandler(BuildConnectionsFramework);
 
-            BuildConnectionsFramework();
+            EstablishConnections();
 
             Console.WriteLine("ICanTransferMoney is running.");
             Console.WriteLine("Hit any key to prepare shutdown.");
@@ -61,26 +67,28 @@ namespace ICanTransferMoney
             Console.ReadLine();
         }
 
-        private static void BuildConnectionsFramework(object sender = null, ElapsedEventArgs e = null)
+        private static void EstablishConnections()
         {
             // set up data sources
-            try
+            Console.WriteLine("Initializing services...");
+            while (true)
             {
-                Initialize();
-                connectTimer.Stop();
-            }
-            catch(EndpointNotFoundException)
-            {
-                Console.WriteLine("One of services not found. Will try again every 5s.");
-                if(!connectTimer.Enabled)
-                    connectTimer.Start();
+                try
+                {
+                    Initialize();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Problem occured while connecting to services. Retrying connection.");
+                    log.Error(ex.Message);
+                }
             }
         }
 
         static void Initialize()
         {
             // set up service
-            Console.WriteLine("Initializing services...");
             IServiceFactory serviceFactory = new ServiceConnector(serviceRepoAddress);
 
             serviceRepo = serviceFactory.GetServiceRepository();
@@ -121,9 +129,9 @@ namespace ICanTransferMoney
                 serviceRepo.Unregister("ICanTransferMoney");
                 serviceHost.Close();
             }
-            catch (TimeoutException)
+            catch (Exception ex)
             {
-
+                log.Warn(ex.Message);
             }
             keepAliveTimer.Enabled = false;
             log.Info("Service unregistered");

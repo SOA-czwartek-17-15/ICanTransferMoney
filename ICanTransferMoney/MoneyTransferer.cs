@@ -28,6 +28,8 @@ namespace ICanTransferMoney
             {
                 accountRepository = serviceFactory.GetAccountRepository();
                 auditorService = serviceFactory.GetAuditorService();
+                if (accountRepository == null || auditorService == null)
+                    return false;
             }
             catch(EndpointNotFoundException)
             {
@@ -45,39 +47,54 @@ namespace ICanTransferMoney
             }
             catch(NullReferenceException)
             {
-                Console.WriteLine("Invalid account ID given.");
+                log.Warn("Account with given Guid doesn't exist. Returning false.");
                 return false;
             }
 
             // OPERATIONS:
-            bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);
-            
-            if(withdrawn)
+            try
             {
-                bool transferred = accountRepository.ChangeAccountBalance(accIdTo, amount);
-                if(!transferred)
+
+                bool withdrawn = accountRepository.ChangeAccountBalance(accIdFrom, -amount);
+                log.Info("Money withdrawn from " + accIdFrom);
+                if(withdrawn)
                 {
-                    // assert IAccountRepository is BROKEN
-                    // try to recover
-                    accountRepository.ChangeAccountBalance(accIdFrom, amount);
+                    bool transferred = accountRepository.ChangeAccountBalance(accIdTo, amount);
+                    log.Info("Money trasfered to "+accIdTo);
+                    if(!transferred)
+                    {
+                        // assert IAccountRepository is BROKEN
+                        // try to recover
+                        accountRepository.ChangeAccountBalance(accIdFrom, amount);
+                        return false;
+                    }
+                    // make audits
+                    bool auditFromDone = auditorService.AddAudit(accNrFrom,-amount);
+                    //if (!auditFromDone)
+                    //    scheduleAuditRetry(accIdFrom, -amount);
+                    bool auditToDone = auditorService.AddAudit(accNrTo,amount);
+                    //if (!auditToDone)
+                    //    scheduleAuditRetry(accIdTo, amount);
+                    if (!auditFromDone || !auditToDone)
+                    {
+                        log.Error("Audit failed!");
+                    }
+                    log.Info("Money trasfered from "+accIdFrom+" to "+accIdTo+", amount="+amount);
+                    return true;
+                }
+                else
+                {
+                    log.Info("Transfer not possible, not enough money");
                     return false;
                 }
-                // make audits
-                bool auditFromDone = auditorService.AddAudit(accNrFrom,-amount);
-                //if (!auditFromDone)
-                //    scheduleAuditRetry(accIdFrom, -amount);
-                bool auditToDone = auditorService.AddAudit(accNrTo,amount);
-                //if (!auditToDone)
-                //    scheduleAuditRetry(accIdTo, amount);
-                if (!auditFromDone || !auditToDone)
-                {
-                    log.Error("Audit unsuccessful!");
-                }
-                return true;
+
             }
-            
-            // probably not enough money
-            return false;
+            catch (Exception ex)
+            {
+                log.Error("Transfering error: "+ex.Message);
+                return false;
+            }
+
         }
 
 

@@ -3,130 +3,83 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.ServiceModel;
-using Contracts;
-using System.Timers;
-using log4net;
-using log4net.Config;
-using System.Xml;
+using System.Configuration;
+
 namespace ICanTransferMoney
 {
     class Program
     {
-        static string serviceRepoAddress = "";
-        static string localAddress = "";
-        static Timer keepAliveTimer;
-        static Timer connectTimer;
-        static ILog log = LogManager.GetLogger("Program");
-        static ServiceHost serviceHost;
-        static IServiceRepository serviceRepo;
+        private static string serviceRepoAddress;
+        private static string serviceRepoPort;
+        private static string localPort;
 
         static void Main(string[] args)
         {
-            BasicConfigurator.Configure();
-            // Wczytanie konfiguracji
-            XmlDocument doc = new XmlDocument();
-            try
-            {
-                doc.Load("../../config.xml");
-            }
-            catch (System.IO.FileNotFoundException)
-            {
-                Console.WriteLine("Configuration file not found!");
+            if (!Configure())
                 return;
-            }
-            
-            serviceRepoAddress = doc.GetElementsByTagName("serviceRepoAddress")[0].InnerText;
-            localAddress = doc.GetElementsByTagName("localAddress")[0].InnerText;
 
-            if (serviceRepoAddress == null || localAddress == null)
-            {
-                Console.WriteLine("Service Repository address or local address not found in config file");
+            ServiceRepository serviceRepo = new ServiceRepository(buildServiceRepoLocation());
+            ServiceLocations serviceLocs = serviceRepo.GetServiceLocations();
+
+            AccountRepository accountRepo = new AccountRepository(serviceLocs.accountRepoAddress);
+            AuditorService auditorServ = new AuditorService(serviceLocs.auditorAddress);
+
+            if (!serviceRepo.RegisterMe())
                 return;
-            }
 
-            // Próba połączenia
-            connectTimer = new Timer(5000);  // Próbuj łączyć się co 5s
-            connectTimer.Elapsed += new ElapsedEventHandler(BuildConnectionsFramework);
+            MoneyTransferService mts = new MoneyTransferService(accountRepo,auditorServ);
 
-            BuildConnectionsFramework();
+            mts.Dispose();
 
-            Console.WriteLine("ICanTransferMoney is running.");
-            Console.WriteLine("Hit any key to prepare shutdown.");
-            Console.ReadLine();
-            Console.WriteLine("Click once again to shutdown service.");
-            Console.ReadLine();
-            UnregisterService();
-            Console.WriteLine("Service closed. Press any key to continue.");
+            serviceRepo.UnregisterMe();
+
+            Console.WriteLine("Program się zakończy");
             Console.ReadLine();
         }
 
-        private static void BuildConnectionsFramework(object sender = null, ElapsedEventArgs e = null)
+        private static string buildServiceRepoLocation()
         {
-            // set up data sources
+            StringBuilder sb = new StringBuilder("tcp://");
+            sb.Append(serviceRepoAddress);
+            sb.Append(":");
+            sb.Append(int.Parse(serviceRepoPort));
+            return sb.ToString();
+        }
+
+
+
+        private static bool Configure()
+        {
             try
             {
-                Initialize();
-                connectTimer.Stop();
+
+                var appSettings = ConfigurationManager.AppSettings;
+
+                if (appSettings.Count < 3)
+                {
+                    Console.WriteLine("Niepelny zestaw danych konfiguracyjnych");
+                    Console.ReadLine();
+                    return false;
+                }
+
+                serviceRepoAddress = appSettings["ServiceRepoAddress"];
+                serviceRepoPort = appSettings["ServiceRepoPort"];
+                localPort = appSettings["LocalPort"];
+
+                if (serviceRepoAddress == null || serviceRepoPort == null || localPort == null)
+                {
+                    Console.WriteLine("Brak odpowiednich pól w konfiguracji");
+                    return false;
+                }
+
+                return true;
             }
-            catch(EndpointNotFoundException)
+            catch (ConfigurationErrorsException)
             {
-                Console.WriteLine("One of services not found. Will try again every 5s.");
-                if(!connectTimer.Enabled)
-                    connectTimer.Start();
+                Console.WriteLine("Błąd wczytywania konfiguracji");
+                return false;
             }
         }
 
-        static void Initialize()
-        {
-            // set up service
-            Console.WriteLine("Initializing services...");
-            IServiceFactory serviceFactory = new ServiceConnector(serviceRepoAddress);
-
-            serviceRepo = serviceFactory.GetServiceRepository();
-            MoneyTransferer transferer = new MoneyTransferer(serviceFactory);
-
-            OpenService(transferer);
-            RegisterService(serviceRepo);
-        }
-
-
-        private static void OpenService(Contracts.ICanTransferMoney service)
-        {
-            log.Info("Opening service endpoint");
-            serviceHost = new ServiceHost(service, new Uri[] { new Uri(localAddress) });
-            NetTcpBinding serverBinding = new NetTcpBinding(SecurityMode.None);
-            serviceHost.AddServiceEndpoint(typeof(Contracts.ICanTransferMoney), serverBinding, localAddress);
-            serviceHost.Open();
-            log.Info("Service endpoint opened");
-        }
-
-        private static void RegisterService(IServiceRepository serviceRepo)
-        {
-            log.Info("Registering service in ServiceRepository");
-            serviceRepo.RegisterService("ICanTransferMoney", localAddress);
-            log.Info("Service registered");
-            
-            AliveKeeper keeper = new AliveKeeper(serviceRepo);
-            keepAliveTimer = new Timer(3000);
-            keepAliveTimer.Elapsed += new ElapsedEventHandler(keeper.KeepAlive);
-            keepAliveTimer.Enabled = true;
-        }
-
-        private static void UnregisterService()
-        {
-            log.Info("Unregistering service");
-            try
-            {
-                serviceRepo.Unregister("ICanTransferMoney");
-                serviceHost.Close();
-            }
-            catch (TimeoutException)
-            {
-
-            }
-            keepAliveTimer.Enabled = false;
-            log.Info("Service unregistered");
-        }
     }
 }

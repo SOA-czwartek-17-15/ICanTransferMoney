@@ -1,5 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<TransferMoneyConfig>
-  <localAddress>net.tcp://0.0.0.0:50009/ICanTransferMoney</localAddress>
-  <serviceRepoAddress>net.tcp://192.168.1.90:50000/IServiceRepository</serviceRepoAddress>
-</TransferMoneyConfig>

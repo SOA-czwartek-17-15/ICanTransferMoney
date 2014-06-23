@@ -18,9 +18,13 @@ namespace ICanTransferMoney
             if (!Configure())
                 return;
 
+            Console.WriteLine("Connecting to Service Repository");
             ServiceRepository serviceRepo = new ServiceRepository(buildServiceRepoLocation());
+            Console.WriteLine("Service Repository connected. Fetching service locations.")
             ServiceLocations serviceLocs = serviceRepo.GetServiceLocations();
+            Console.WriteLine("Service locations fetched.");
 
+            Console.WriteLine("Connecting to Account Repository");
             AccountRepository accountRepo = new AccountRepository(serviceLocs.accountRepoAddress);
             AuditorService auditorServ = new AuditorService(serviceLocs.auditorAddress);
 

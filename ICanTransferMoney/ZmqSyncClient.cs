@@ -9,18 +9,19 @@ using System.Runtime.CompilerServices;
 
 namespace ICanTransferMoney
 {
-    class ZmqSyncClient : IDisposable
+    class ZmqSyncClient
     {
         private readonly string _ipAddress;
 
+        private Context _context;
         private Socket _clientSocket;
         private bool _open = false;
 
         public ZmqSyncClient(string ipAddress)
         {
             _ipAddress = ipAddress;
-            var context = new Context();
-            _clientSocket = context.Socket(SocketType.REQ);
+            _context = new Context();
+            _clientSocket = _context.Socket(SocketType.REQ);
             _clientSocket.Connect(_ipAddress);
             _open = true;
         }
@@ -39,6 +40,7 @@ namespace ICanTransferMoney
         {
             _open = false;
             _clientSocket.Dispose();
+            _context.Dispose();
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using Contracts;
 using Newtonsoft.Json;
 
@@ -10,11 +11,14 @@ namespace ICanTransferMoney
 {
     class ServiceRepository
     {
-        private ZmqSyncClient zmq;
+        private ZmqSyncClient _zmq;
+        private Thread _aliveThread;
+        private bool _open = false;
 
         public ServiceRepository(string ipAddress)
         {
-            zmq = new ZmqSyncClient(ipAddress);
+            _zmq = new ZmqSyncClient(ipAddress);
+            _open = true;
         }
 
         internal ServiceLocations GetServiceLocations()
@@ -25,10 +29,10 @@ namespace ICanTransferMoney
             msg.Function = "getServiceAddress";
             msg.Service = "IAccountRepository";
 
-            serviceLocs.accountRepoAddress = zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
+            serviceLocs.accountRepoAddress = _zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
 
             msg.Service = "IAuditorService";
-            serviceLocs.auditorAddress = zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
+            serviceLocs.auditorAddress = _zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
             return serviceLocs;
         }
 
@@ -38,7 +42,7 @@ namespace ICanTransferMoney
             msg.Function = "registerService";
             msg.Service = "ICanTransferMoney";
 
-            string response = zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
+            string response = _zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
             Console.WriteLine("Registration response: " + response);
 
             return true; //FIXME
@@ -50,13 +54,33 @@ namespace ICanTransferMoney
             msg.Function = "unregisterService";
             msg.Service = "ICanTransferMoney";
 
-            string response = zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
+            string response = _zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
             Console.WriteLine("Unregistration response: " + response);
         }
 
         internal void Dispose()
         {
-            zmq.Dispose();
+            _zmq.Dispose();
+        }
+
+        internal void sustain()
+        {
+            _aliveThread = new Thread(SendAlive);
+            _aliveThread.Start();
+        }
+
+        private void SendAlive()
+        {
+            while (_open)
+            {
+                JSONMessage msg = new JSONMessage();
+                msg.Function = "isAlive";
+                msg.Service = "ICanTransferMoney";
+                Console.WriteLine("Sending alive");
+                _zmq.SendAndGetResponse(JsonConvert.SerializeObject(msg));
+                Console.WriteLine("Alive sent");
+                Thread.Sleep(3000);
+            }
         }
     }
 }

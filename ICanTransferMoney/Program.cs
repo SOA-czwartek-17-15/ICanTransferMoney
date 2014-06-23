@@ -20,6 +20,7 @@ namespace ICanTransferMoney
 
             Console.WriteLine("Connecting to Service Repository");
             ServiceRepository serviceRepo = new ServiceRepository(buildServiceRepoLocation());
+            serviceRepo.sustain();
             Console.WriteLine("Service Repository connected. Fetching service locations.");
             ServiceLocations serviceLocs = serviceRepo.GetServiceLocations();
             Console.WriteLine("Service locations fetched.");

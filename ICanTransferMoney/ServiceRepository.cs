@@ -19,6 +19,7 @@ namespace ICanTransferMoney
         {
             _zmq = new ZmqSyncClient(ipAddress);
             _open = true;
+            Console.WriteLine("Connecting to service repo on: " + ipAddress);
         }
 
         internal ServiceLocations GetServiceLocations()
@@ -66,7 +67,7 @@ namespace ICanTransferMoney
         internal void sustain()
         {
             _aliveThread = new Thread(SendAlive);
-            _aliveThread.Start();
+            //_aliveThread.Start();
         }
 
         private void SendAlive()
